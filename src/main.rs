@@ -1,5 +1,6 @@
 mod cli;
 mod config;
+mod memo;
 mod obsidian;
 
 use clap::Parser;
