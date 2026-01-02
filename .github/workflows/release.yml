@@ -1,0 +1,216 @@
+name: リリース
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ビルド (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            use-cross: true
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      - name: Rustツールチェーンのセットアップ
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: 依存関係のキャッシュ
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: crossのインストール
+        if: matrix.use-cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: ビルド (cross)
+        if: matrix.use-cross
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: ビルド (cargo)
+        if: ${{ !matrix.use-cross }}
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: アーティファクトのアップロード (Unix)
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: thn-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/thn
+
+      - name: アーティファクトのアップロード (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: thn-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/thn.exe
+
+  release:
+    name: リリース作成
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      - name: バージョン取得
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: 全アーティファクトのダウンロード
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: アーカイブ作成
+        run: |
+          mkdir -p release
+          VERSION=${{ steps.version.outputs.VERSION }}
+
+          # macOS x86_64
+          cd artifacts/thn-x86_64-apple-darwin
+          chmod +x thn
+          tar czvf ../../release/thn-${VERSION}-x86_64-apple-darwin.tar.gz thn
+          cd ../..
+
+          # macOS aarch64
+          cd artifacts/thn-aarch64-apple-darwin
+          chmod +x thn
+          tar czvf ../../release/thn-${VERSION}-aarch64-apple-darwin.tar.gz thn
+          cd ../..
+
+          # Linux x86_64
+          cd artifacts/thn-x86_64-unknown-linux-gnu
+          chmod +x thn
+          tar czvf ../../release/thn-${VERSION}-x86_64-unknown-linux-gnu.tar.gz thn
+          cd ../..
+
+          # Linux aarch64
+          cd artifacts/thn-aarch64-unknown-linux-gnu
+          chmod +x thn
+          tar czvf ../../release/thn-${VERSION}-aarch64-unknown-linux-gnu.tar.gz thn
+          cd ../..
+
+          # Windows x86_64
+          cd artifacts/thn-x86_64-pc-windows-msvc
+          zip ../../release/thn-${VERSION}-x86_64-pc-windows-msvc.zip thn.exe
+          cd ../..
+
+          ls -la release/
+
+      - name: GitHub Releaseの作成
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release/*
+
+      - name: SHA256ハッシュの計算
+        id: sha256
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          echo "MACOS_INTEL=$(shasum -a 256 release/thn-${VERSION}-x86_64-apple-darwin.tar.gz | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          echo "MACOS_ARM=$(shasum -a 256 release/thn-${VERSION}-aarch64-apple-darwin.tar.gz | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          echo "LINUX_INTEL=$(shasum -a 256 release/thn-${VERSION}-x86_64-unknown-linux-gnu.tar.gz | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          echo "LINUX_ARM=$(shasum -a 256 release/thn-${VERSION}-aarch64-unknown-linux-gnu.tar.gz | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+      sha256_macos_intel: ${{ steps.sha256.outputs.MACOS_INTEL }}
+      sha256_macos_arm: ${{ steps.sha256.outputs.MACOS_ARM }}
+      sha256_linux_intel: ${{ steps.sha256.outputs.LINUX_INTEL }}
+      sha256_linux_arm: ${{ steps.sha256.outputs.LINUX_ARM }}
+
+  homebrew-update:
+    name: Homebrew Formula更新
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: homebrew-tapのチェックアウト
+        uses: actions/checkout@v4
+        with:
+          repository: ignission/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Formulaの更新
+        run: |
+          VERSION=${{ needs.release.outputs.version }}
+          SHA256_MACOS_INTEL=${{ needs.release.outputs.sha256_macos_intel }}
+          SHA256_MACOS_ARM=${{ needs.release.outputs.sha256_macos_arm }}
+          SHA256_LINUX_INTEL=${{ needs.release.outputs.sha256_linux_intel }}
+          SHA256_LINUX_ARM=${{ needs.release.outputs.sha256_linux_arm }}
+
+          cat > homebrew-tap/Formula/thn.rb << EOF
+          class Thn < Formula
+            desc "CLI tool for appending memos to Obsidian daily notes (Thino compatible)"
+            homepage "https://github.com/ignission/thn"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              on_arm do
+                url "https://github.com/ignission/thn/releases/download/v${VERSION}/thn-${VERSION}-aarch64-apple-darwin.tar.gz"
+                sha256 "${SHA256_MACOS_ARM}"
+              end
+              on_intel do
+                url "https://github.com/ignission/thn/releases/download/v${VERSION}/thn-${VERSION}-x86_64-apple-darwin.tar.gz"
+                sha256 "${SHA256_MACOS_INTEL}"
+              end
+            end
+
+            on_linux do
+              on_arm do
+                url "https://github.com/ignission/thn/releases/download/v${VERSION}/thn-${VERSION}-aarch64-unknown-linux-gnu.tar.gz"
+                sha256 "${SHA256_LINUX_ARM}"
+              end
+              on_intel do
+                url "https://github.com/ignission/thn/releases/download/v${VERSION}/thn-${VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+                sha256 "${SHA256_LINUX_INTEL}"
+              end
+            end
+
+            def install
+              bin.install "thn"
+            end
+
+            test do
+              system "#{bin}/thn", "--version"
+            end
+          end
+          EOF
+
+          cat homebrew-tap/Formula/thn.rb
+
+      - name: コミットとプッシュ
+        run: |
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/thn.rb
+          git commit -m "Update thn to ${{ needs.release.outputs.version }}"
+          git push
