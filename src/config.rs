@@ -1,0 +1,168 @@
+//! 設定ファイル管理
+//!
+//! thn設定ファイル（~/.config/thn/config.toml）の読み書きを行う。
+
+use std::fmt;
+use std::fs;
+use std::io;
+use std::path::PathBuf;
+
+use serde::{Deserialize, Serialize};
+
+/// 設定構造体
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Config {
+    /// Obsidian Vaultのパス
+    pub vault_path: PathBuf,
+}
+
+/// 設定関連のエラー
+#[derive(Debug)]
+pub enum ConfigError {
+    /// IO操作に失敗
+    Io(io::Error),
+    /// TOMLのデシリアライズに失敗
+    TomlDeserialize(toml::de::Error),
+    /// TOMLのシリアライズに失敗
+    TomlSerialize(toml::ser::Error),
+    /// 設定ファイルが見つからない
+    NotFound,
+}
+
+impl fmt::Display for ConfigError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ConfigError::Io(err) => write!(f, "io error: {err}"),
+            ConfigError::TomlDeserialize(err) => write!(f, "toml parse error: {err}"),
+            ConfigError::TomlSerialize(err) => write!(f, "toml serialize error: {err}"),
+            ConfigError::NotFound => write!(f, "not configured. run 'thn init' first"),
+        }
+    }
+}
+
+impl std::error::Error for ConfigError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            ConfigError::Io(err) => Some(err),
+            ConfigError::TomlDeserialize(err) => Some(err),
+            ConfigError::TomlSerialize(err) => Some(err),
+            ConfigError::NotFound => None,
+        }
+    }
+}
+
+impl From<io::Error> for ConfigError {
+    fn from(err: io::Error) -> Self {
+        if err.kind() == io::ErrorKind::NotFound {
+            ConfigError::NotFound
+        } else {
+            ConfigError::Io(err)
+        }
+    }
+}
+
+impl From<toml::de::Error> for ConfigError {
+    fn from(err: toml::de::Error) -> Self {
+        ConfigError::TomlDeserialize(err)
+    }
+}
+
+impl From<toml::ser::Error> for ConfigError {
+    fn from(err: toml::ser::Error) -> Self {
+        ConfigError::TomlSerialize(err)
+    }
+}
+
+/// 設定ファイルのパスを返す
+///
+/// `~/.config/thn/config.toml` のパスを返す。
+/// `dirs::config_dir()` が利用できない環境ではパニックする。
+pub fn config_path() -> PathBuf {
+    dirs::config_dir()
+        .expect("could not determine config directory")
+        .join("thn")
+        .join("config.toml")
+}
+
+/// 設定ファイルを読み込む
+///
+/// # Errors
+///
+/// - `ConfigError::NotFound` - 設定ファイルが存在しない場合
+/// - `ConfigError::Io` - ファイル読み込みに失敗した場合
+/// - `ConfigError::TomlDeserialize` - TOMLのパースに失敗した場合
+pub fn load() -> Result<Config, ConfigError> {
+    let path = config_path();
+    let content = fs::read_to_string(&path)?;
+    let config: Config = toml::from_str(&content)?;
+    Ok(config)
+}
+
+impl Config {
+    /// 設定をファイルに保存する
+    ///
+    /// ディレクトリが存在しない場合は作成する。
+    ///
+    /// # Errors
+    ///
+    /// - `ConfigError::Io` - ファイル書き込みに失敗した場合
+    /// - `ConfigError::TomlSerialize` - TOMLのシリアライズに失敗した場合
+    pub fn save(&self) -> Result<(), ConfigError> {
+        let path = config_path();
+
+        // 親ディレクトリが存在しない場合は作成
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let content = toml::to_string_pretty(self)?;
+        fs::write(&path, content)?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_config_path_ends_with_expected_path() {
+        let path = config_path();
+        assert!(path.ends_with("thn/config.toml"));
+    }
+
+    #[test]
+    fn test_config_serialize_deserialize() {
+        let config = Config {
+            vault_path: PathBuf::from("/path/to/vault"),
+        };
+
+        let toml_str = toml::to_string(&config).unwrap();
+        let parsed: Config = toml::from_str(&toml_str).unwrap();
+
+        assert_eq!(parsed.vault_path, config.vault_path);
+    }
+
+    #[test]
+    fn test_config_error_display() {
+        let err = ConfigError::NotFound;
+        assert_eq!(
+            err.to_string(),
+            "not configured. run 'thn init' first"
+        );
+    }
+
+    #[test]
+    fn test_io_error_not_found_converts_to_config_not_found() {
+        let io_err = io::Error::new(io::ErrorKind::NotFound, "file not found");
+        let config_err: ConfigError = io_err.into();
+        assert!(matches!(config_err, ConfigError::NotFound));
+    }
+
+    #[test]
+    fn test_io_error_other_converts_to_config_io() {
+        let io_err = io::Error::new(io::ErrorKind::PermissionDenied, "permission denied");
+        let config_err: ConfigError = io_err.into();
+        assert!(matches!(config_err, ConfigError::Io(_)));
+    }
+}
