@@ -1,0 +1,8 @@
+[package]
+name = "thn"
+version = "0.1.0"
+edition = "2021"
+description = "CLI tool for appending memos to Obsidian daily notes (Thino compatible)"
+license = "MIT"
+
+[dependencies]
