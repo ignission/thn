@@ -1,5 +1,7 @@
 # thn
 
+![CI](https://github.com/ignission/thn/actions/workflows/ci.yml/badge.svg)
+
 Obsidian [Thino](https://github.com/Quorafind/Obsidian-Memos)プラグインと互換性のあるCLIツール。ターミナルからデイリーノートにメモを追記できます。
 
 ## 特徴
