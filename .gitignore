@@ -1,9 +1,13 @@
 # Rust
 /target/
-Cargo.lock
 
 # spec-workflow
 .spec-workflow/approvals/
 
 # Logs
 *.log
+
+
+# Added by cargo
+
+/target
