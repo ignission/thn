@@ -9,6 +9,7 @@ use std::path::Path;
 use serde::Deserialize;
 
 /// デイリーノートプラグインの設定
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct DailyNotesSettings {
     /// デイリーノートを保存するフォルダ（Vaultルートからの相対パス）
@@ -30,11 +31,13 @@ impl Default for DailyNotesSettings {
 }
 
 /// デフォルトの日付フォーマットを返す
+#[allow(dead_code)]
 fn default_format() -> String {
     "YYYY-MM-DD".to_string()
 }
 
 /// Thino（obsidian-memos）プラグインの設定
+#[allow(dead_code)]
 #[derive(Debug, Default, Deserialize)]
 pub struct ThinoSettings {
     /// メモを挿入するヘッダー（例: "# Memos"）
@@ -54,6 +57,7 @@ pub struct ThinoSettings {
 /// # 戻り値
 ///
 /// デイリーノート設定。エラー時はデフォルト値。
+#[allow(dead_code)]
 pub fn load_daily_notes_settings(vault_path: &Path) -> DailyNotesSettings {
     let settings_path = vault_path.join(".obsidian").join("daily-notes.json");
 
@@ -75,6 +79,7 @@ pub fn load_daily_notes_settings(vault_path: &Path) -> DailyNotesSettings {
 /// # 戻り値
 ///
 /// Thino設定。エラー時はデフォルト値。
+#[allow(dead_code)]
 pub fn load_thino_settings(vault_path: &Path) -> ThinoSettings {
     let settings_path = vault_path
         .join(".obsidian")

@@ -146,10 +146,7 @@ mod tests {
     #[test]
     fn test_config_error_display() {
         let err = ConfigError::NotFound;
-        assert_eq!(
-            err.to_string(),
-            "not configured. run 'thn init' first"
-        );
+        assert_eq!(err.to_string(), "not configured. run 'thn init' first");
     }
 
     #[test]
