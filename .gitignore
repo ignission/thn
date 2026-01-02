@@ -1,6 +1,5 @@
 # Rust
 /target/
-Cargo.lock
 
 # spec-workflow
 .spec-workflow/approvals/
