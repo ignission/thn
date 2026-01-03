@@ -13,7 +13,7 @@ Obsidian [Thino](https://github.com/Quorafind/Obsidian-Memos)プラグインと�
 ## インストール
 
 ```bash
-# Homebrew（準備中）
+# Homebrew
 brew install ignission/tap/thn
 
 # ソースから
@@ -73,7 +73,23 @@ vault_path = "/path/to/vault"
 ## 要件
 
 - Obsidian + Daily Notesプラグイン
-- Thinoプラグイン
+- Thinoプラグイン（推奨：メモをThino UIで閲覧する場合）
+
+## 制限事項
+
+### デイリーノートテンプレート
+
+thnはデイリーノートファイルを直接作成するため、**Obsidianのテンプレート（Templater含む）は適用されません**。
+
+テンプレートを使用している場合は、以下のいずれかの方法で対応してください：
+
+1. **推奨**: Obsidianで先にデイリーノートを開く（テンプレートが適用される）
+2. Daily Notes設定で「Open daily note on startup」を有効化
+3. [obsidian-cli](https://github.com/Yakitrak/obsidian-cli)の`daily`コマンドを併用
+
+### 対応モード
+
+ThinoのDAILYモード（デイリーノート連携）のみ対応。FILE/MULTI/CANVASモードは非対応です。
 
 ## ライセンス
 
