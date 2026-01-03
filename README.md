@@ -28,6 +28,9 @@ Automatically appended to your daily note:
 - 14:30 Summarize the new feature decisions from the meeting
 ```
 
+<img width="602" height="269" alt="image" src="https://github.com/user-attachments/assets/8ddc566d-db3e-4752-a019-9b4354c4c243" />
+
+
 ## ✨ Features
 
 - **⚡ Fast**: Capture memos without launching Obsidian
