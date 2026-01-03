@@ -11,7 +11,10 @@
 </p>
 
 ---
-![screenshot](https://github.com/user-attachments/assets/488ba559-eed9-41cc-93be-5073c912897a)
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/488ba559-eed9-41cc-93be-5073c912897a" alt="thn demo" width="600">
+</p>
 
 **thn** is a CLI tool compatible with the [Thino](https://github.com/Quorafind/Obsidian-Thino) plugin. Quickly capture memos from your terminal without opening Obsidian.
 
