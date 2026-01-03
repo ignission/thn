@@ -144,5 +144,5 @@ Issue・PRを歓迎します。
 ---
 
 <p align="center">
-  Made with ❤️ for Obsidian users
+  For Obsidian and Terminal Lovers ❤️
 </p>
