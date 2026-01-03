@@ -462,5 +462,4 @@ mod tests {
         assert!(content.contains("メモ1"));
         assert!(content.contains("メモ2"));
     }
-
 }
