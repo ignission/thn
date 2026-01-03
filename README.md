@@ -65,11 +65,11 @@ Download from [Releases](https://github.com/ignission/thn/releases)
 
 ```bash
 # Interactive mode
-$ thn init
+$ thn --init
 Vault path: /Users/you/Documents/MyVault
 
 # Or specify directly
-$ thn init /path/to/vault
+$ thn --init /path/to/vault
 ```
 
 ### 2. Append a memo
@@ -81,7 +81,7 @@ $ thn "Shopping list: milk, bread, eggs"
 ### 3. Check configuration
 
 ```bash
-$ thn config
+$ thn --config
 vault_path: /Users/you/Documents/MyVault
 daily_folder: Daily
 daily_format: YYYY-MM-DD
@@ -90,13 +90,14 @@ daily_format: YYYY-MM-DD
 ## 📝 Usage Examples
 
 ```bash
-# Simple memo
-thn "Idea: think of a new project name"
+# Simple memo (quotes optional)
+thn Idea: think of a new project name
 
-# Works without quotes (be careful with shell special characters)
+# Multiple words work without quotes
 thn Check tomorrow schedule
 
-# Use quotes for multi-line memos
+# Use quotes for shell special characters or multi-line
+thn "Task with 'quotes' inside"
 thn "TODO:
 - Task 1
 - Task 2"

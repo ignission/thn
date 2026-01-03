@@ -15,9 +15,10 @@ cargo build --release
 
 # 実行
 cargo run -- "メモ内容"
-cargo run -- init
-cargo run -- init /path/to/vault
-cargo run -- config
+cargo run -- メモ 複数 引数  # クォート不要
+cargo run -- --init
+cargo run -- --init /path/to/vault
+cargo run -- --config
 
 # テスト
 cargo test
@@ -50,9 +51,9 @@ src/
 
 | コマンド | 説明 |
 |---------|------|
-| `thn <メモ>` | デイリーノートにメモ追記 |
-| `thn init [path]` | Vaultパス設定（省略時は対話形式） |
-| `thn config` | 現在の設定を表示 |
+| `thn <メモ...>` | デイリーノートにメモ追記（複数引数はスペースで結合） |
+| `thn --init [path]` | Vaultパス設定（-i でも可、省略時は対話形式） |
+| `thn --config` | 現在の設定を表示（-c でも可） |
 
 ## Thino互換性
 
