@@ -4,8 +4,8 @@
 
 use std::fmt;
 use std::fs;
-use std::io;
-use std::path::PathBuf;
+use std::io::{self, BufRead, Write};
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -27,6 +27,10 @@ pub enum ConfigError {
     TomlSerialize(toml::ser::Error),
     /// 設定ファイルが見つからない
     NotFound,
+    /// Vaultパスが存在しない
+    VaultNotFound(PathBuf),
+    /// ObsidianのVaultではない（.obsidianディレクトリがない）
+    NotObsidianVault(PathBuf),
 }
 
 impl fmt::Display for ConfigError {
@@ -36,6 +40,10 @@ impl fmt::Display for ConfigError {
             ConfigError::TomlDeserialize(err) => write!(f, "toml parse error: {err}"),
             ConfigError::TomlSerialize(err) => write!(f, "toml serialize error: {err}"),
             ConfigError::NotFound => write!(f, "not configured. run 'thn init' first"),
+            ConfigError::VaultNotFound(path) => write!(f, "vault not found: {}", path.display()),
+            ConfigError::NotObsidianVault(path) => {
+                write!(f, "not an obsidian vault: {}", path.display())
+            }
         }
     }
 }
@@ -46,7 +54,9 @@ impl std::error::Error for ConfigError {
             ConfigError::Io(err) => Some(err),
             ConfigError::TomlDeserialize(err) => Some(err),
             ConfigError::TomlSerialize(err) => Some(err),
-            ConfigError::NotFound => None,
+            ConfigError::NotFound
+            | ConfigError::VaultNotFound(_)
+            | ConfigError::NotObsidianVault(_) => None,
         }
     }
 }
@@ -96,6 +106,56 @@ pub fn load() -> Result<Config, ConfigError> {
     let content = fs::read_to_string(&path)?;
     let config: Config = toml::from_str(&content)?;
     Ok(config)
+}
+
+/// Vaultパスを検証する
+///
+/// 指定されたパスが存在し、Obsidian Vaultであることを確認する。
+///
+/// # Errors
+///
+/// - `ConfigError::VaultNotFound` - パスが存在しない場合
+/// - `ConfigError::NotObsidianVault` - .obsidianディレクトリがない場合
+pub fn validate_vault_path(path: &Path) -> Result<(), ConfigError> {
+    // パスが存在するかチェック
+    if !path.exists() {
+        return Err(ConfigError::VaultNotFound(path.to_path_buf()));
+    }
+
+    // .obsidianディレクトリが存在するかチェック
+    let obsidian_dir = path.join(".obsidian");
+    if !obsidian_dir.exists() {
+        return Err(ConfigError::NotObsidianVault(path.to_path_buf()));
+    }
+
+    Ok(())
+}
+
+/// 対話形式でVaultパスを入力
+///
+/// "Vault path: " を表示してstdinから読み取る。
+///
+/// # Errors
+///
+/// - 標準入力からの読み取りに失敗した場合
+/// - 入力が空の場合
+pub fn prompt_vault_path() -> Result<PathBuf, io::Error> {
+    print!("Vault path: ");
+    io::stdout().flush()?;
+
+    let stdin = io::stdin();
+    let mut line = String::new();
+    stdin.lock().read_line(&mut line)?;
+
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "vault path is required",
+        ));
+    }
+
+    Ok(PathBuf::from(trimmed))
 }
 
 impl Config {
@@ -161,5 +221,45 @@ mod tests {
         let io_err = io::Error::new(io::ErrorKind::PermissionDenied, "permission denied");
         let config_err: ConfigError = io_err.into();
         assert!(matches!(config_err, ConfigError::Io(_)));
+    }
+
+    #[test]
+    fn test_vault_not_found_error_display() {
+        let path = PathBuf::from("/nonexistent/path");
+        let err = ConfigError::VaultNotFound(path);
+        assert_eq!(err.to_string(), "vault not found: /nonexistent/path");
+    }
+
+    #[test]
+    fn test_not_obsidian_vault_error_display() {
+        let path = PathBuf::from("/some/directory");
+        let err = ConfigError::NotObsidianVault(path);
+        assert_eq!(err.to_string(), "not an obsidian vault: /some/directory");
+    }
+
+    #[test]
+    fn test_validate_vault_path_not_found() {
+        let path = Path::new("/nonexistent/vault/path/12345");
+        let result = validate_vault_path(path);
+        assert!(matches!(result, Err(ConfigError::VaultNotFound(_))));
+    }
+
+    #[test]
+    fn test_validate_vault_path_not_obsidian_vault() {
+        // 一時ディレクトリを作成（.obsidianなし）
+        let temp_dir = tempfile::tempdir().unwrap();
+        let result = validate_vault_path(temp_dir.path());
+        assert!(matches!(result, Err(ConfigError::NotObsidianVault(_))));
+    }
+
+    #[test]
+    fn test_validate_vault_path_success() {
+        // 一時ディレクトリを作成し、.obsidianディレクトリを追加
+        let temp_dir = tempfile::tempdir().unwrap();
+        let obsidian_dir = temp_dir.path().join(".obsidian");
+        fs::create_dir(&obsidian_dir).unwrap();
+
+        let result = validate_vault_path(temp_dir.path());
+        assert!(result.is_ok());
     }
 }

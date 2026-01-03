@@ -12,36 +12,57 @@ fn main() {
 
     match &cli.command {
         Some(Commands::Init { path }) => {
-            // init コマンドの処理
-            if let Some(vault_path) = path {
-                // パスが指定されている場合は設定を保存
-                let config = config::Config {
-                    vault_path: vault_path.clone(),
-                };
-                if let Err(err) = config.save() {
-                    eprintln!("error: {err}");
-                    std::process::exit(1);
+            // タスク14: initコマンドの改善
+            let vault_path = match path {
+                Some(p) => p.clone(),
+                None => {
+                    // 対話形式でVaultパスを入力
+                    match config::prompt_vault_path() {
+                        Ok(p) => p,
+                        Err(err) => {
+                            eprintln!("error: {err}");
+                            std::process::exit(1);
+                        }
+                    }
                 }
-            } else {
-                // 対話形式は未実装
-                eprintln!("error: interactive mode not implemented. please specify vault path");
+            };
+
+            // バリデーション
+            if let Err(err) = config::validate_vault_path(&vault_path) {
+                eprintln!("error: {err}");
+                std::process::exit(1);
+            }
+
+            // 保存
+            let config = config::Config { vault_path };
+            if let Err(err) = config.save() {
+                eprintln!("error: {err}");
                 std::process::exit(1);
             }
         }
         Some(Commands::Config) => {
-            // config コマンドの処理
-            match config::load() {
-                Ok(config) => {
-                    println!("vault_path = {:?}", config.vault_path.display());
-                }
+            // タスク13: config表示の改善
+            // 設定を読み込み
+            let config = match config::load() {
+                Ok(c) => c,
                 Err(err) => {
                     eprintln!("error: {err}");
                     std::process::exit(1);
                 }
-            }
+            };
+
+            // Obsidian設定も読み込み
+            let daily = obsidian::load_daily_notes_settings(&config.vault_path);
+            let thino = obsidian::load_thino_settings(&config.vault_path);
+
+            // 表示
+            println!("vault_path: {}", config.vault_path.display());
+            println!("daily_folder: {}", daily.folder);
+            println!("daily_format: {}", daily.format);
+            println!("insert_after: {}", thino.insert_after);
         }
         None => {
-            // メモ追記の処理
+            // タスク15: メモコマンド
             if let Some(memo_content) = &cli.memo {
                 // 設定を読み込む
                 let config = match config::load() {

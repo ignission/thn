@@ -6,6 +6,7 @@
 use std::fs;
 use std::path::Path;
 
+use chrono::NaiveDate;
 use serde::Deserialize;
 
 /// デイリーノートプラグインの設定
@@ -91,6 +92,81 @@ pub fn load_thino_settings(vault_path: &Path) -> ThinoSettings {
         .ok()
         .and_then(|content| serde_json::from_str(&content).ok())
         .unwrap_or_default()
+}
+
+/// 未サポートの日付フォーマットパターンかどうかを判定
+///
+/// ddd（曜日）、MMM（月名）、wo（週番号）などのパターンが含まれる場合はtrueを返す
+#[allow(dead_code)]
+fn has_unsupported_pattern(format: &str) -> bool {
+    // 未サポートパターンのリスト
+    // ddd/dddd: 曜日
+    // MMM/MMMM: 月名
+    // wo: 週番号（序数）
+    // ww/WW/W/w: 週番号
+    // Do: 日（序数）
+    // Mo: 月（序数）
+    // Qo/Q: 四半期
+    let unsupported = [
+        "dddd", "ddd", "MMMM", "MMM", "wo", "ww", "WW", "Do", "Mo", "Qo", "Q", "W", "w",
+    ];
+
+    for pattern in unsupported {
+        if format.contains(pattern) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Obsidianの日付フォーマットを実際の日付文字列に変換
+///
+/// Obsidianで使用される日付フォーマット文字列（例: "YYYY-MM-DD"）を
+/// 実際の日付値に基づいた文字列に変換する。
+///
+/// # 引数
+///
+/// * `format` - "YYYY-MM-DD" などのフォーマット文字列
+/// * `date` - 変換する日付
+///
+/// # 戻り値
+///
+/// フォーマットされた日付文字列
+///
+/// # サポートするパターン
+///
+/// - `YYYY`: 4桁年（例: 2026）
+/// - `MM`: 2桁月（ゼロ埋め、例: 01）
+/// - `DD`: 2桁日（ゼロ埋め、例: 03）
+///
+/// # フォールバック
+///
+/// 未サポートパターン（ddd, MMM等）が含まれる場合は "YYYY-MM-DD" 形式にフォールバック。
+///
+/// # 例
+///
+/// ```
+/// use chrono::NaiveDate;
+/// use thn::obsidian::format_date;
+///
+/// let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+/// assert_eq!(format_date("YYYY-MM-DD", date), "2026-01-03");
+/// assert_eq!(format_date("YYYY/MM/DD", date), "2026/01/03");
+/// assert_eq!(format_date("YYYYMMDD", date), "20260103");
+/// assert_eq!(format_date("DD-MM-YYYY", date), "03-01-2026");
+/// ```
+#[allow(dead_code)]
+pub fn format_date(format: &str, date: NaiveDate) -> String {
+    // 未サポートパターンが含まれる場合はデフォルトフォーマットを使用
+    if has_unsupported_pattern(format) {
+        return date.format("%Y-%m-%d").to_string();
+    }
+
+    // サポートするパターンを置換
+    format
+        .replace("YYYY", &date.format("%Y").to_string())
+        .replace("MM", &date.format("%m").to_string())
+        .replace("DD", &date.format("%d").to_string())
 }
 
 #[cfg(test)]
@@ -278,5 +354,136 @@ mod tests {
         let settings = load_thino_settings(vault_path);
 
         assert_eq!(settings.insert_after, "");
+    }
+
+    // ===== format_date テスト =====
+
+    #[test]
+    fn test_format_date_standard() {
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("YYYY-MM-DD", date), "2026-01-03");
+    }
+
+    #[test]
+    fn test_format_date_slash_separator() {
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("YYYY/MM/DD", date), "2026/01/03");
+    }
+
+    #[test]
+    fn test_format_date_no_separator() {
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("YYYYMMDD", date), "20260103");
+    }
+
+    #[test]
+    fn test_format_date_european_format() {
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("DD-MM-YYYY", date), "03-01-2026");
+    }
+
+    #[test]
+    fn test_format_date_dot_separator() {
+        let date = NaiveDate::from_ymd_opt(2026, 12, 25).unwrap();
+        assert_eq!(format_date("DD.MM.YYYY", date), "25.12.2026");
+    }
+
+    #[test]
+    fn test_format_date_year_month_only() {
+        let date = NaiveDate::from_ymd_opt(2026, 7, 15).unwrap();
+        assert_eq!(format_date("YYYY-MM", date), "2026-07");
+    }
+
+    #[test]
+    fn test_format_date_zero_padding() {
+        // 月と日が1桁の場合のゼロ埋め確認
+        let date = NaiveDate::from_ymd_opt(2026, 1, 5).unwrap();
+        assert_eq!(format_date("YYYY-MM-DD", date), "2026-01-05");
+    }
+
+    #[test]
+    fn test_format_date_two_digit_month_day() {
+        // 月と日が2桁の場合
+        let date = NaiveDate::from_ymd_opt(2026, 11, 28).unwrap();
+        assert_eq!(format_date("YYYY-MM-DD", date), "2026-11-28");
+    }
+
+    #[test]
+    fn test_format_date_unsupported_weekday() {
+        // ddd（曜日）が含まれる場合はデフォルトにフォールバック
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("YYYY-MM-DD ddd", date), "2026-01-03");
+    }
+
+    #[test]
+    fn test_format_date_unsupported_full_weekday() {
+        // dddd（完全な曜日名）が含まれる場合はデフォルトにフォールバック
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("dddd, YYYY-MM-DD", date), "2026-01-03");
+    }
+
+    #[test]
+    fn test_format_date_unsupported_month_name() {
+        // MMM（月名）が含まれる場合はデフォルトにフォールバック
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("DD MMM YYYY", date), "2026-01-03");
+    }
+
+    #[test]
+    fn test_format_date_unsupported_full_month_name() {
+        // MMMM（完全な月名）が含まれる場合はデフォルトにフォールバック
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("MMMM DD, YYYY", date), "2026-01-03");
+    }
+
+    #[test]
+    fn test_format_date_unsupported_week_number() {
+        // wo（週番号）が含まれる場合はデフォルトにフォールバック
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("YYYY-wo", date), "2026-01-03");
+    }
+
+    #[test]
+    fn test_format_date_unsupported_ordinal_day() {
+        // Do（序数日）が含まれる場合はデフォルトにフォールバック
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("MMMM Do, YYYY", date), "2026-01-03");
+    }
+
+    #[test]
+    fn test_format_date_empty_format() {
+        // 空のフォーマット文字列
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("", date), "");
+    }
+
+    #[test]
+    fn test_format_date_custom_text() {
+        // フォーマットに任意のテキストを含む場合
+        let date = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        assert_eq!(format_date("note_YYYY-MM-DD", date), "note_2026-01-03");
+    }
+
+    #[test]
+    fn test_has_unsupported_pattern_ddd() {
+        assert!(has_unsupported_pattern("YYYY-MM-DD ddd"));
+    }
+
+    #[test]
+    fn test_has_unsupported_pattern_mmm() {
+        assert!(has_unsupported_pattern("DD MMM YYYY"));
+    }
+
+    #[test]
+    fn test_has_unsupported_pattern_wo() {
+        assert!(has_unsupported_pattern("YYYY-wo"));
+    }
+
+    #[test]
+    fn test_has_unsupported_pattern_supported_only() {
+        assert!(!has_unsupported_pattern("YYYY-MM-DD"));
+        assert!(!has_unsupported_pattern("YYYY/MM/DD"));
+        assert!(!has_unsupported_pattern("YYYYMMDD"));
+        assert!(!has_unsupported_pattern("DD-MM-YYYY"));
     }
 }
