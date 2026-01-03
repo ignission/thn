@@ -53,13 +53,11 @@ fn main() {
 
             // Obsidian設定も読み込み
             let daily = obsidian::load_daily_notes_settings(&config.vault_path);
-            let thino = obsidian::load_thino_settings(&config.vault_path);
 
             // 表示
             println!("vault_path: {}", config.vault_path.display());
             println!("daily_folder: {}", daily.folder);
             println!("daily_format: {}", daily.format);
-            println!("insert_after: {}", thino.insert_after);
         }
         None => {
             // タスク15: メモコマンド

@@ -5,7 +5,7 @@
 
 use std::fmt;
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
 
 use chrono::Local;
@@ -80,12 +80,11 @@ fn daily_note_path(vault_path: &Path, folder: &str, date_str: &str) -> PathBuf {
 /// # 引数
 ///
 /// * `path` - デイリーノートのパス
-/// * `insert_after` - InsertAfterヘッダー（空の場合はヘッダーなし）
 ///
 /// # Errors
 ///
 /// ファイル作成やディレクトリ作成に失敗した場合
-fn ensure_daily_note(path: &Path, insert_after: &str) -> io::Result<()> {
+fn ensure_daily_note(path: &Path) -> io::Result<()> {
     if path.exists() {
         return Ok(());
     }
@@ -95,78 +94,10 @@ fn ensure_daily_note(path: &Path, insert_after: &str) -> io::Result<()> {
         fs::create_dir_all(parent)?;
     }
 
-    // ファイルを作成
-    let mut file = fs::File::create(path)?;
-
-    // insert_afterが空でなければヘッダーを書き込む
-    if !insert_after.is_empty() {
-        writeln!(file, "{insert_after}")?;
-    }
+    // 空ファイルを作成
+    fs::File::create(path)?;
 
     Ok(())
-}
-
-/// InsertAfterヘッダーの挿入位置を検索する
-///
-/// insert_afterヘッダーを探し、そのセクションの末尾
-/// （次の同レベル以上のヘッダーの直前）の位置を返す。
-///
-/// # 引数
-///
-/// * `content` - ファイル内容
-/// * `insert_after` - 検索するヘッダー（例: "# Memos"）
-///
-/// # 戻り値
-///
-/// 挿入位置（バイトオフセット）。ヘッダーが見つからない場合はファイル末尾。
-fn find_insert_position(content: &str, insert_after: &str) -> usize {
-    // insert_afterが空の場合はファイル末尾
-    if insert_after.is_empty() {
-        return content.len();
-    }
-
-    // ヘッダーレベルを計算（#の数）
-    let header_level = insert_after.chars().take_while(|&c| c == '#').count();
-
-    // insert_afterヘッダーを探す
-    let mut lines = content.lines().peekable();
-    let mut current_pos = 0;
-    let mut found_header = false;
-    let mut section_end = content.len();
-
-    while let Some(line) = lines.next() {
-        let line_with_newline_len = if lines.peek().is_some() {
-            line.len() + 1 // 改行文字を含む
-        } else {
-            line.len()
-        };
-
-        if !found_header {
-            // ヘッダーを探す
-            if line.trim() == insert_after.trim() {
-                found_header = true;
-            }
-        } else {
-            // ヘッダー発見後、次の同レベル以上のヘッダーを探す
-            let trimmed = line.trim();
-            if trimmed.starts_with('#') {
-                let current_level = trimmed.chars().take_while(|&c| c == '#').count();
-                if current_level <= header_level {
-                    section_end = current_pos;
-                    break;
-                }
-            }
-        }
-
-        current_pos += line_with_newline_len;
-    }
-
-    // ヘッダーが見つからなかった場合はファイル末尾
-    if !found_header {
-        return content.len();
-    }
-
-    section_end
 }
 
 /// メモ行をフォーマットする
@@ -219,7 +150,6 @@ fn convert_date_format(format: &str) -> String {
 pub fn append_memo(vault_path: &Path, content: &str) -> Result<(), MemoError> {
     // Obsidian設定を読み込む
     let daily_notes_settings = obsidian::load_daily_notes_settings(vault_path);
-    let thino_settings = obsidian::load_thino_settings(vault_path);
 
     // 今日の日付を取得
     let today = Local::now();
@@ -230,33 +160,21 @@ pub fn append_memo(vault_path: &Path, content: &str) -> Result<(), MemoError> {
     let note_path = daily_note_path(vault_path, &daily_notes_settings.folder, &date_str);
 
     // デイリーノートが存在しなければ作成
-    ensure_daily_note(&note_path, &thino_settings.insert_after)?;
+    ensure_daily_note(&note_path)?;
 
     // 既存のコンテンツを読み込む
     let existing_content = fs::read_to_string(&note_path).unwrap_or_default();
 
-    // 挿入位置を特定
-    let insert_pos = find_insert_position(&existing_content, &thino_settings.insert_after);
-
     // メモ行を生成
     let memo_line = format_memo_line(content);
 
-    // 新しいコンテンツを構築
-    let (before, after) = existing_content.split_at(insert_pos);
-
-    // 挿入位置の前が改行で終わっていない場合は改行を追加
-    let needs_newline_before = !before.is_empty() && !before.ends_with('\n');
-    // 挿入位置の後にコンテンツがある場合は改行を追加
-    let needs_newline_after = !after.is_empty() && !after.starts_with('\n');
-
-    let new_content = if needs_newline_before {
-        format!("{before}\n{memo_line}\n{after}")
-    } else if needs_newline_after {
-        format!("{before}{memo_line}\n{after}")
-    } else if before.is_empty() && after.is_empty() {
+    // ファイル末尾に追記
+    let new_content = if existing_content.is_empty() {
         format!("{memo_line}\n")
+    } else if existing_content.ends_with('\n') {
+        format!("{existing_content}{memo_line}\n")
     } else {
-        format!("{before}{memo_line}\n{after}")
+        format!("{existing_content}\n{memo_line}\n")
     };
 
     // ファイルに書き込む
@@ -328,7 +246,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let note_path = dir.path().join("2024-01-15.md");
 
-        ensure_daily_note(&note_path, "").unwrap();
+        ensure_daily_note(&note_path).unwrap();
 
         assert!(note_path.exists());
         let content = fs::read_to_string(&note_path).unwrap();
@@ -336,27 +254,15 @@ mod tests {
     }
 
     #[test]
-    fn test_ensure_daily_note_with_header() {
-        let dir = tempdir().unwrap();
-        let note_path = dir.path().join("2024-01-15.md");
-
-        ensure_daily_note(&note_path, "# Memos").unwrap();
-
-        assert!(note_path.exists());
-        let content = fs::read_to_string(&note_path).unwrap();
-        assert_eq!(content, "# Memos\n");
-    }
-
-    #[test]
     fn test_ensure_daily_note_creates_parent_dirs() {
         let dir = tempdir().unwrap();
         let note_path = dir.path().join("Daily").join("2024").join("2024-01-15.md");
 
-        ensure_daily_note(&note_path, "## Notes").unwrap();
+        ensure_daily_note(&note_path).unwrap();
 
         assert!(note_path.exists());
         let content = fs::read_to_string(&note_path).unwrap();
-        assert_eq!(content, "## Notes\n");
+        assert_eq!(content, "");
     }
 
     #[test]
@@ -367,88 +273,11 @@ mod tests {
         // 既存のファイルを作成
         fs::write(&note_path, "existing content").unwrap();
 
-        ensure_daily_note(&note_path, "# Memos").unwrap();
+        ensure_daily_note(&note_path).unwrap();
 
         // 既存のコンテンツが保持されている
         let content = fs::read_to_string(&note_path).unwrap();
         assert_eq!(content, "existing content");
-    }
-
-    // ========================================
-    // タスク10: find_insert_position テスト
-    // ========================================
-
-    #[test]
-    fn test_find_insert_position_empty_insert_after() {
-        let content = "# Title\nSome content\n";
-        let insert_after = "";
-
-        let pos = find_insert_position(content, insert_after);
-
-        assert_eq!(pos, content.len());
-    }
-
-    #[test]
-    fn test_find_insert_position_header_not_found() {
-        let content = "# Title\nSome content\n";
-        let insert_after = "# Memos";
-
-        let pos = find_insert_position(content, insert_after);
-
-        assert_eq!(pos, content.len());
-    }
-
-    #[test]
-    fn test_find_insert_position_header_at_end() {
-        let content = "# Title\nSome content\n# Memos\n";
-        let insert_after = "# Memos";
-
-        let pos = find_insert_position(content, insert_after);
-
-        assert_eq!(pos, content.len());
-    }
-
-    #[test]
-    fn test_find_insert_position_header_with_content() {
-        let content = "# Title\nSome content\n# Memos\nMemo 1\nMemo 2\n";
-        let insert_after = "# Memos";
-
-        let pos = find_insert_position(content, insert_after);
-
-        assert_eq!(pos, content.len());
-    }
-
-    #[test]
-    fn test_find_insert_position_before_next_header() {
-        let content = "# Title\n# Memos\nMemo 1\n# Other\nOther content\n";
-        let insert_after = "# Memos";
-
-        let pos = find_insert_position(content, insert_after);
-
-        // "# Other" の前の位置
-        assert_eq!(&content[pos..], "# Other\nOther content\n");
-    }
-
-    #[test]
-    fn test_find_insert_position_respects_header_level() {
-        let content = "# Title\n## Memos\nMemo 1\n### Submemo\nSub content\n## Other\n";
-        let insert_after = "## Memos";
-
-        let pos = find_insert_position(content, insert_after);
-
-        // ### Submemo は ## より下位なので含む、## Other の前で停止
-        assert_eq!(&content[pos..], "## Other\n");
-    }
-
-    #[test]
-    fn test_find_insert_position_higher_level_stops() {
-        let content = "# Title\n## Memos\nMemo content\n# Next Section\n";
-        let insert_after = "## Memos";
-
-        let pos = find_insert_position(content, insert_after);
-
-        // # Next Section は ## より上位なので停止
-        assert_eq!(&content[pos..], "# Next Section\n");
     }
 
     // ========================================
@@ -559,40 +388,6 @@ mod tests {
     }
 
     #[test]
-    fn test_append_memo_with_insert_after() {
-        let dir = tempdir().unwrap();
-        let vault_path = dir.path();
-
-        // Obsidian設定を作成
-        fs::create_dir_all(vault_path.join(".obsidian")).unwrap();
-        let daily_notes_json = r#"{"folder": "", "format": "YYYY-MM-DD"}"#;
-        fs::write(
-            vault_path.join(".obsidian").join("daily-notes.json"),
-            daily_notes_json,
-        )
-        .unwrap();
-
-        // Thino設定を作成
-        let plugin_dir = vault_path
-            .join(".obsidian")
-            .join("plugins")
-            .join("obsidian-memos");
-        fs::create_dir_all(&plugin_dir).unwrap();
-        let thino_json = r##"{"InsertAfter": "# Memos"}"##;
-        fs::write(plugin_dir.join("data.json"), thino_json).unwrap();
-
-        append_memo(vault_path, "テストメモ").unwrap();
-
-        let today = Local::now().format("%Y-%m-%d").to_string();
-        let note_path = vault_path.join(format!("{today}.md"));
-        let content = fs::read_to_string(&note_path).unwrap();
-
-        // ヘッダーが作成されていることを確認
-        assert!(content.starts_with("# Memos\n"));
-        assert!(content.contains("テストメモ"));
-    }
-
-    #[test]
     fn test_append_memo_to_existing_file() {
         let dir = tempdir().unwrap();
         let vault_path = dir.path();
@@ -668,48 +463,4 @@ mod tests {
         assert!(content.contains("メモ2"));
     }
 
-    #[test]
-    fn test_append_memo_insert_before_next_section() {
-        let dir = tempdir().unwrap();
-        let vault_path = dir.path();
-
-        // Obsidian設定を作成
-        fs::create_dir_all(vault_path.join(".obsidian")).unwrap();
-        let daily_notes_json = r#"{"folder": "", "format": "YYYY-MM-DD"}"#;
-        fs::write(
-            vault_path.join(".obsidian").join("daily-notes.json"),
-            daily_notes_json,
-        )
-        .unwrap();
-
-        // Thino設定を作成
-        let plugin_dir = vault_path
-            .join(".obsidian")
-            .join("plugins")
-            .join("obsidian-memos");
-        fs::create_dir_all(&plugin_dir).unwrap();
-        let thino_json = r##"{"InsertAfter": "# Memos"}"##;
-        fs::write(plugin_dir.join("data.json"), thino_json).unwrap();
-
-        // 既存のデイリーノートを作成（# Memos と # Other セクションあり）
-        let today = Local::now().format("%Y-%m-%d").to_string();
-        let note_path = vault_path.join(format!("{today}.md"));
-        fs::write(
-            &note_path,
-            "# Memos\n- existing memo\n# Other\nOther content\n",
-        )
-        .unwrap();
-
-        append_memo(vault_path, "新しいメモ").unwrap();
-
-        let content = fs::read_to_string(&note_path).unwrap();
-
-        // メモは # Other の前に挿入されるべき
-        let memos_pos = content.find("# Memos").unwrap();
-        let other_pos = content.find("# Other").unwrap();
-        let new_memo_pos = content.find("新しいメモ").unwrap();
-
-        assert!(new_memo_pos > memos_pos);
-        assert!(new_memo_pos < other_pos);
-    }
 }

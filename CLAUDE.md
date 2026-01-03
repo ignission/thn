@@ -44,7 +44,7 @@ src/
 1. `thn "メモ"` → cli.rsでパース
 2. config.rs → `~/.config/thn/config.toml`から`vault_path`取得
 3. obsidian.rs → Obsidian設定ファイル読み取り
-4. memo.rs → InsertAfterヘッダー末尾にメモ追記
+4. memo.rs → デイリーノート末尾にメモ追記
 
 ## CLIコマンド
 
@@ -60,9 +60,6 @@ src/
 ```markdown
 - HH:MM メモ内容
 ```
-
-### 追記位置
-`InsertAfter`ヘッダーの末尾（次の同レベル以上ヘッダーの直前）に挿入。
 
 ### デイリーノートパス
 ```
@@ -83,7 +80,6 @@ vault_path = "/path/to/vault"
 |---------|-----------|-----------|
 | `.obsidian/daily-notes.json` | `folder` | "" (Vaultルート) |
 | `.obsidian/daily-notes.json` | `format` | "YYYY-MM-DD" |
-| `.obsidian/plugins/obsidian-memos/data.json` | `InsertAfter` | "" (ファイル末尾) |
 
 ## 日付フォーマット
 
