@@ -24,21 +24,6 @@ fn create_test_vault(vault_path: &std::path::Path) {
         .expect("failed to write daily-notes.json");
 }
 
-/// テスト用のVault構造を作成するヘルパー関数（InsertAfter設定あり）
-fn create_test_vault_with_thino(vault_path: &std::path::Path) {
-    create_test_vault(vault_path);
-
-    // Thino設定
-    let plugin_dir = vault_path
-        .join(".obsidian")
-        .join("plugins")
-        .join("obsidian-memos");
-    fs::create_dir_all(&plugin_dir).expect("failed to create plugin directory");
-
-    let thino_json = r##"{"InsertAfter": "# Memos"}"##;
-    fs::write(plugin_dir.join("data.json"), thino_json).expect("failed to write thino data.json");
-}
-
 // ========================================
 // テスト1: init -> memo -> config フロー
 // ========================================
@@ -84,8 +69,7 @@ fn test_init_memo_config_flow() {
         .success()
         .stdout(predicate::str::contains("vault_path:"))
         .stdout(predicate::str::contains("daily_folder:"))
-        .stdout(predicate::str::contains("daily_format:"))
-        .stdout(predicate::str::contains("insert_after:"));
+        .stdout(predicate::str::contains("daily_format:"));
 
     // Step 4: デイリーノートファイルの内容を確認
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
@@ -97,48 +81,6 @@ fn test_init_memo_config_flow() {
     assert!(
         content.contains("テストメモ"),
         "メモ内容がデイリーノートに含まれていない"
-    );
-}
-
-#[test]
-fn test_init_memo_config_flow_with_thino() {
-    // InsertAfter設定ありのVaultを作成
-    let vault_dir = tempdir().expect("failed to create temp vault directory");
-    create_test_vault_with_thino(vault_dir.path());
-
-    let config_dir = tempdir().expect("failed to create temp config directory");
-
-    // init
-    let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
-    cmd.env("XDG_CONFIG_HOME", config_dir.path())
-        .env("HOME", config_dir.path())
-        .arg("init")
-        .arg(vault_dir.path());
-
-    cmd.assert().success();
-
-    // memo
-    let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
-    cmd.env("XDG_CONFIG_HOME", config_dir.path())
-        .env("HOME", config_dir.path())
-        .arg("Thino形式テスト");
-
-    cmd.assert().success();
-
-    // デイリーノートの内容を確認
-    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-    let note_path = vault_dir.path().join(format!("{today}.md"));
-
-    let content = fs::read_to_string(&note_path).expect("failed to read daily note");
-
-    // ヘッダーが作成されていることを確認
-    assert!(
-        content.contains("# Memos"),
-        "InsertAfterヘッダーが含まれていない"
-    );
-    assert!(
-        content.contains("Thino形式テスト"),
-        "メモ内容が含まれていない"
     );
 }
 

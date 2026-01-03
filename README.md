@@ -75,7 +75,6 @@ $ thn config
 vault_path: /Users/you/Documents/MyVault
 daily_folder: Daily
 daily_format: YYYY-MM-DD
-insert_after: # Journal
 ```
 
 ## 📝 使用例
@@ -109,7 +108,6 @@ vault_path = "/path/to/vault"
 |-----|-----------|-----------|
 | デイリーノートフォルダ | `.obsidian/daily-notes.json` | Vaultルート |
 | 日付フォーマット | `.obsidian/daily-notes.json` | `YYYY-MM-DD` |
-| 挿入位置（InsertAfter） | `.obsidian/plugins/obsidian-memos/data.json` | ファイル末尾 |
 
 ## 📋 要件
 
