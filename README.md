@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">thn</h1>
   <p align="center">
-    <strong>ターミナルからObsidianデイリーノートにメモを追記</strong>
+    <strong>Append memos to Obsidian daily notes from your terminal</strong>
   </p>
   <p align="center">
     <a href="https://github.com/ignission/thn/actions/workflows/ci.yml"><img src="https://github.com/ignission/thn/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -12,26 +12,26 @@
 
 ---
 
-**thn**は[Thino](https://github.com/Quorafind/Obsidian-Thino)プラグイン互換のCLIツール。Obsidianを開かずに、ターミナルから素早くメモを記録できます。
+**thn** is a CLI tool compatible with the [Thino](https://github.com/Quorafind/Obsidian-Thino) plugin. Quickly capture memos from your terminal without opening Obsidian.
 
 ```bash
-$ thn "会議で決まった新機能の方針をまとめる"
+$ thn "Summarize the new feature decisions from the meeting"
 ```
 
-デイリーノートに自動追記：
+Automatically appended to your daily note:
 
 ```markdown
-- 14:30 会議で決まった新機能の方針をまとめる
+- 14:30 Summarize the new feature decisions from the meeting
 ```
 
-## ✨ 特徴
+## ✨ Features
 
-- **⚡ 高速**: Obsidianを起動せずにメモを記録
-- **🔄 Thino互換**: `- HH:MM メモ` フォーマットでThino UIと連携
-- **⚙️ ゼロ設定**: Obsidian設定を自動読み取り
-- **🔇 UNIX哲学**: 成功時は沈黙、エラー時のみ出力
+- **⚡ Fast**: Capture memos without launching Obsidian
+- **🔄 Thino-compatible**: Uses `- HH:MM memo` format for Thino UI integration
+- **⚙️ Zero config**: Automatically reads Obsidian settings
+- **🔇 UNIX philosophy**: Silent on success, output only on error
 
-## 📦 インストール
+## 📦 Installation
 
 ### Homebrew (macOS / Linux)
 
@@ -45,30 +45,30 @@ brew install ignission/tap/thn
 cargo install --git https://github.com/ignission/thn
 ```
 
-### バイナリ
+### Binary
 
-[Releases](https://github.com/ignission/thn/releases)からダウンロード
+Download from [Releases](https://github.com/ignission/thn/releases)
 
-## 🚀 クイックスタート
+## 🚀 Quick Start
 
-### 1. Vaultを設定
+### 1. Configure your vault
 
 ```bash
-# 対話形式
+# Interactive mode
 $ thn init
 Vault path: /Users/you/Documents/MyVault
 
-# または直接指定
+# Or specify directly
 $ thn init /path/to/vault
 ```
 
-### 2. メモを追記
+### 2. Append a memo
 
 ```bash
-$ thn "買い物リスト：牛乳、パン、卵"
+$ thn "Shopping list: milk, bread, eggs"
 ```
 
-### 3. 設定を確認
+### 3. Check configuration
 
 ```bash
 $ thn config
@@ -77,24 +77,24 @@ daily_folder: Daily
 daily_format: YYYY-MM-DD
 ```
 
-## 📝 使用例
+## 📝 Usage Examples
 
 ```bash
-# シンプルなメモ
-thn "アイデア：新しいプロジェクト名を考える"
+# Simple memo
+thn "Idea: think of a new project name"
 
-# 引用符なしでも動作（シェルの特殊文字に注意）
-thn 明日の予定を確認する
+# Works without quotes (be careful with shell special characters)
+thn Check tomorrow schedule
 
-# 複数行は引用符で囲む
+# Use quotes for multi-line memos
 thn "TODO:
-- タスク1
-- タスク2"
+- Task 1
+- Task 2"
 ```
 
-## ⚙️ 設定
+## ⚙️ Configuration
 
-### thn設定ファイル
+### thn config file
 
 `~/.config/thn/config.toml`
 
@@ -102,42 +102,42 @@ thn "TODO:
 vault_path = "/path/to/vault"
 ```
 
-### Obsidian設定（自動読み取り）
+### Obsidian settings (auto-detected)
 
-| 設定 | 読み取り元 | デフォルト |
-|-----|-----------|-----------|
-| デイリーノートフォルダ | `.obsidian/daily-notes.json` | Vaultルート |
-| 日付フォーマット | `.obsidian/daily-notes.json` | `YYYY-MM-DD` |
+| Setting | Source | Default |
+|---------|--------|---------|
+| Daily notes folder | `.obsidian/daily-notes.json` | Vault root |
+| Date format | `.obsidian/daily-notes.json` | `YYYY-MM-DD` |
 
-## 📋 要件
+## 📋 Requirements
 
-| 必須 | 推奨 |
-|-----|------|
-| Obsidian | Thinoプラグイン |
-| Daily Notesプラグイン | |
+| Required | Recommended |
+|----------|-------------|
+| Obsidian | Thino plugin |
+| Daily Notes plugin | |
 
-> **Note**: Thinoがなくてもメモは追記されます。ThinoをインストールするとThino UIでメモを閲覧できます。
+> **Note**: Memos are appended even without Thino. Install Thino to view memos in the Thino UI.
 
-## ⚠️ 制限事項
+## ⚠️ Limitations
 
-### テンプレート
+### Templates
 
-thnはファイルを直接作成するため、**Obsidianテンプレート（Templater含む）は適用されません**。
+thn creates files directly, so **Obsidian templates (including Templater) are not applied**.
 
-**回避策：**
-1. Obsidianで先にデイリーノートを開く（推奨）
-2. 「Open daily note on startup」を有効化
-3. [obsidian-cli](https://github.com/Yakitrak/obsidian-cli)を併用
+**Workarounds:**
+1. Open the daily note in Obsidian first (recommended)
+2. Enable "Open daily note on startup"
+3. Use [obsidian-cli](https://github.com/Yakitrak/obsidian-cli) alongside thn
 
-### 対応モード
+### Supported modes
 
-ThinoのDAILYモードのみ対応。FILE/MULTI/CANVASモードは非対応。
+Only Thino's DAILY mode is supported. FILE/MULTI/CANVAS modes are not supported.
 
-## 🤝 コントリビュート
+## 🤝 Contributing
 
-Issue・PRを歓迎します。
+Issues and PRs are welcome.
 
-## 📄 ライセンス
+## 📄 License
 
 [MIT](LICENSE)
 
