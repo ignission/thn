@@ -46,7 +46,7 @@ fn test_init_memo_config_flow() {
     let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
     cmd.env("XDG_CONFIG_HOME", config_dir.path())
         .env("HOME", config_dir.path())
-        .arg("init")
+        .arg("--init")
         .arg(vault_dir.path());
 
     cmd.assert().success();
@@ -63,7 +63,7 @@ fn test_init_memo_config_flow() {
     let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
     cmd.env("XDG_CONFIG_HOME", config_dir.path())
         .env("HOME", config_dir.path())
-        .arg("config");
+        .arg("--config");
 
     cmd.assert()
         .success()
@@ -95,7 +95,7 @@ fn test_multiple_memos() {
     let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
     cmd.env("XDG_CONFIG_HOME", config_dir.path())
         .env("HOME", config_dir.path())
-        .arg("init")
+        .arg("--init")
         .arg(vault_dir.path());
 
     cmd.assert().success();
@@ -139,7 +139,7 @@ fn test_error_memo_content_required() {
 fn test_error_vault_not_found() {
     // 存在しないパスでinit
     let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
-    cmd.arg("init").arg("/nonexistent/path/to/vault");
+    cmd.arg("--init").arg("/nonexistent/path/to/vault");
 
     cmd.assert()
         .failure()
@@ -152,7 +152,7 @@ fn test_error_not_obsidian_vault() {
     let temp_dir = tempdir().expect("failed to create temp directory");
 
     let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
-    cmd.arg("init").arg(temp_dir.path());
+    cmd.arg("--init").arg(temp_dir.path());
 
     cmd.assert()
         .failure()
@@ -182,7 +182,7 @@ fn test_error_not_configured_config_command() {
     let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
     cmd.env("XDG_CONFIG_HOME", config_dir.path())
         .env("HOME", config_dir.path())
-        .arg("config");
+        .arg("--config");
 
     cmd.assert()
         .failure()
@@ -204,7 +204,7 @@ fn test_init_with_valid_vault() {
     let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
     cmd.env("XDG_CONFIG_HOME", config_dir.path())
         .env("HOME", config_dir.path())
-        .arg("init")
+        .arg("--init")
         .arg(vault_dir.path());
 
     // initコマンドが成功することを確認
@@ -225,7 +225,7 @@ fn test_config_shows_vault_path() {
     let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
     cmd.env("XDG_CONFIG_HOME", config_dir.path())
         .env("HOME", config_dir.path())
-        .arg("init")
+        .arg("--init")
         .arg(vault_dir.path());
 
     cmd.assert().success();
@@ -234,7 +234,7 @@ fn test_config_shows_vault_path() {
     let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
     cmd.env("XDG_CONFIG_HOME", config_dir.path())
         .env("HOME", config_dir.path())
-        .arg("config");
+        .arg("--config");
 
     // Vaultパスが出力に含まれることを確認
     let vault_path_str = vault_dir.path().to_string_lossy();
@@ -254,7 +254,7 @@ fn test_memo_format_contains_time() {
     let mut cmd = Command::cargo_bin("thn").expect("failed to find thn binary");
     cmd.env("XDG_CONFIG_HOME", config_dir.path())
         .env("HOME", config_dir.path())
-        .arg("init")
+        .arg("--init")
         .arg(vault_dir.path());
 
     cmd.assert().success();
