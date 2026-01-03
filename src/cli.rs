@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
 
 /// Obsidianデイリーノートにメモを追記するCLIツール（Thino互換）
 #[derive(Parser)]
@@ -14,22 +14,15 @@ use clap::{Parser, Subcommand};
     about = "CLI tool for appending memos to Obsidian daily notes (Thino compatible)"
 )]
 pub struct Cli {
-    /// サブコマンド
-    #[command(subcommand)]
-    pub command: Option<Commands>,
+    /// Vaultパスを設定（省略時は対話形式）
+    #[arg(short = 'i', long, value_name = "PATH", num_args = 0..=1, default_missing_value = "")]
+    pub init: Option<PathBuf>,
 
-    /// メモ内容
-    pub memo: Option<String>,
-}
-
-/// サブコマンドの定義
-#[derive(Subcommand)]
-pub enum Commands {
-    /// Vaultパスを設定
-    Init {
-        /// Vaultのパス（省略時は対話形式）
-        path: Option<PathBuf>,
-    },
     /// 現在の設定を表示
-    Config,
+    #[arg(short = 'c', long)]
+    pub config: bool,
+
+    /// メモ内容（複数引数はスペースで結合）
+    #[arg(trailing_var_arg = true)]
+    pub memo: Vec<String>,
 }
