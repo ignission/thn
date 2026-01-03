@@ -28,8 +28,11 @@ Automatically appended to your daily note:
 - 14:30 Summarize the new feature decisions from the meeting
 ```
 
-<img width="610" height="273" alt="image" src="https://github.com/user-attachments/assets/aa62adad-3e71-4a5c-b39d-3a6c6c8a1f3f" />
-
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/aa62adad-3e71-4a5c-b39d-3a6c6c8a1f3f" alt="Thino UI" width="600">
+  <br>
+  <em>View your memos in Thino's beautiful UI</em>
+</p>
 
 ## ✨ Features
 
