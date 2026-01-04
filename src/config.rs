@@ -133,9 +133,41 @@ pub fn validate_vault_path(path: &Path) -> Result<(), ConfigError> {
     Ok(())
 }
 
+/// 入力された文字列をVaultパスとしてパースする
+///
+/// `~` で始まるパスはホームディレクトリに展開される。
+/// 空文字列の場合はエラーを返す。
+///
+/// # Errors
+///
+/// - 入力が空の場合
+pub fn parse_vault_path(input: &str) -> Result<PathBuf, io::Error> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "vault path is required",
+        ));
+    }
+
+    if trimmed == "~" {
+        return Ok(dirs::home_dir().unwrap_or_else(|| PathBuf::from("~")));
+    }
+
+    if let Some(rest) = trimmed.strip_prefix("~/") {
+        let path = dirs::home_dir()
+            .map(|home| home.join(rest))
+            .unwrap_or_else(|| PathBuf::from(trimmed));
+        return Ok(path);
+    }
+
+    Ok(PathBuf::from(trimmed))
+}
+
 /// 対話形式でVaultパスを入力
 ///
 /// "Vault path: " を表示してstdinから読み取る。
+/// `~` で始まるパスはホームディレクトリに展開される。
 ///
 /// # Errors
 ///
@@ -149,15 +181,7 @@ pub fn prompt_vault_path() -> Result<PathBuf, io::Error> {
     let mut line = String::new();
     stdin.lock().read_line(&mut line)?;
 
-    let trimmed = line.trim();
-    if trimmed.is_empty() {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "vault path is required",
-        ));
-    }
-
-    Ok(PathBuf::from(trimmed))
+    parse_vault_path(&line)
 }
 
 impl Config {
@@ -266,5 +290,43 @@ mod tests {
 
         let result = validate_vault_path(temp_dir.path());
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_vault_path_home_only() {
+        let home = dirs::home_dir().unwrap();
+        let result = parse_vault_path("~").unwrap();
+        assert_eq!(result, home);
+    }
+
+    #[test]
+    fn test_parse_vault_path_with_tilde() {
+        let home = dirs::home_dir().unwrap();
+        let result = parse_vault_path("~/dev/note").unwrap();
+        assert_eq!(result, home.join("dev/note"));
+    }
+
+    #[test]
+    fn test_parse_vault_path_absolute_unchanged() {
+        let result = parse_vault_path("/absolute/path").unwrap();
+        assert_eq!(result, PathBuf::from("/absolute/path"));
+    }
+
+    #[test]
+    fn test_parse_vault_path_relative_unchanged() {
+        let result = parse_vault_path("relative/path").unwrap();
+        assert_eq!(result, PathBuf::from("relative/path"));
+    }
+
+    #[test]
+    fn test_parse_vault_path_empty_error() {
+        let result = parse_vault_path("");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_vault_path_whitespace_only_error() {
+        let result = parse_vault_path("   ");
+        assert!(result.is_err());
     }
 }
