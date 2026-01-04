@@ -133,20 +133,35 @@ pub fn validate_vault_path(path: &Path) -> Result<(), ConfigError> {
     Ok(())
 }
 
-/// チルダをホームディレクトリに展開する
+/// 入力された文字列をVaultパスとしてパースする
 ///
-/// `~` または `~/...` で始まるパスをホームディレクトリに展開する。
-/// それ以外のパスはそのまま返す。
-fn expand_tilde(path: &str) -> PathBuf {
-    if path == "~" {
+/// `~` で始まるパスはホームディレクトリに展開される。
+/// 空文字列の場合はエラーを返す。
+///
+/// # Errors
+///
+/// - 入力が空の場合
+pub fn parse_vault_path(input: &str) -> Result<PathBuf, io::Error> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "vault path is required",
+        ));
+    }
+
+    // チルダをホームディレクトリに展開
+    let path = if trimmed == "~" {
         dirs::home_dir().unwrap_or_else(|| PathBuf::from("~"))
-    } else if let Some(rest) = path.strip_prefix("~/") {
+    } else if let Some(rest) = trimmed.strip_prefix("~/") {
         dirs::home_dir()
             .map(|home| home.join(rest))
-            .unwrap_or_else(|| PathBuf::from(path))
+            .unwrap_or_else(|| PathBuf::from(trimmed))
     } else {
-        PathBuf::from(path)
-    }
+        PathBuf::from(trimmed)
+    };
+
+    Ok(path)
 }
 
 /// 対話形式でVaultパスを入力
@@ -166,15 +181,7 @@ pub fn prompt_vault_path() -> Result<PathBuf, io::Error> {
     let mut line = String::new();
     stdin.lock().read_line(&mut line)?;
 
-    let trimmed = line.trim();
-    if trimmed.is_empty() {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "vault path is required",
-        ));
-    }
-
-    Ok(expand_tilde(trimmed))
+    parse_vault_path(&line)
 }
 
 impl Config {
@@ -286,28 +293,40 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_tilde_home_only() {
+    fn test_parse_vault_path_home_only() {
         let home = dirs::home_dir().unwrap();
-        let result = expand_tilde("~");
+        let result = parse_vault_path("~").unwrap();
         assert_eq!(result, home);
     }
 
     #[test]
-    fn test_expand_tilde_with_path() {
+    fn test_parse_vault_path_with_tilde() {
         let home = dirs::home_dir().unwrap();
-        let result = expand_tilde("~/dev/note");
+        let result = parse_vault_path("~/dev/note").unwrap();
         assert_eq!(result, home.join("dev/note"));
     }
 
     #[test]
-    fn test_expand_tilde_absolute_path_unchanged() {
-        let result = expand_tilde("/absolute/path");
+    fn test_parse_vault_path_absolute_unchanged() {
+        let result = parse_vault_path("/absolute/path").unwrap();
         assert_eq!(result, PathBuf::from("/absolute/path"));
     }
 
     #[test]
-    fn test_expand_tilde_relative_path_unchanged() {
-        let result = expand_tilde("relative/path");
+    fn test_parse_vault_path_relative_unchanged() {
+        let result = parse_vault_path("relative/path").unwrap();
         assert_eq!(result, PathBuf::from("relative/path"));
+    }
+
+    #[test]
+    fn test_parse_vault_path_empty_error() {
+        let result = parse_vault_path("");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_vault_path_whitespace_only_error() {
+        let result = parse_vault_path("   ");
+        assert!(result.is_err());
     }
 }
