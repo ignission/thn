@@ -1,6 +1,7 @@
 //! 設定ファイル管理
 //!
-//! thn設定ファイル（~/.config/thn/config.toml）の読み書きを行う。
+//! thn設定ファイル（`{config_dir}/thn/config.toml`）の読み書きを行う。
+//! パスはOSによって異なる（macOS: `~/Library/Application Support/`, Linux: `~/.config/`）。
 
 use std::fmt;
 use std::fs;
@@ -87,7 +88,8 @@ impl From<toml::ser::Error> for ConfigError {
 
 /// 設定ファイルのパスを返す
 ///
-/// `~/.config/thn/config.toml` のパスを返す。
+/// `{config_dir}/thn/config.toml` のパスを返す。
+/// パスはOSによって異なる（macOS: `~/Library/Application Support/`, Linux: `~/.config/`）。
 /// `dirs::config_dir()` が利用できない環境ではパニックする。
 pub fn config_path() -> PathBuf {
     dirs::config_dir()

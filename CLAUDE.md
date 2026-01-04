@@ -35,7 +35,7 @@ cargo clippy
 src/
 ├── main.rs      # エントリポイント、CLIディスパッチ
 ├── cli.rs       # clapによるCLI引数定義
-├── config.rs    # 設定ファイル管理（~/.config/thn/config.toml）
+├── config.rs    # 設定ファイル管理（OSごとの設定ディレクトリ）
 ├── obsidian.rs  # Obsidian設定読み取り（daily notes設定等）
 └── memo.rs      # メモ追記ロジック（Thinoフォーマット）
 ```
@@ -43,7 +43,7 @@ src/
 ### データフロー
 
 1. `thn "メモ"` → cli.rsでパース
-2. config.rs → `~/.config/thn/config.toml`から`vault_path`取得
+2. config.rs → 設定ファイルから`vault_path`取得
 3. obsidian.rs → Obsidian設定ファイル読み取り
 4. memo.rs → デイリーノート末尾にメモ追記
 
@@ -70,7 +70,14 @@ src/
 ## 設定ファイル
 
 ### thn設定
-`~/.config/thn/config.toml`
+`{config_dir}/thn/config.toml`
+
+| OS | パス |
+|-----|------|
+| macOS | `~/Library/Application Support/thn/config.toml` |
+| Linux | `~/.config/thn/config.toml` |
+| Windows | `C:\Users\<User>\AppData\Roaming\thn\config.toml` |
+
 ```toml
 vault_path = "/path/to/vault"
 ```
