@@ -197,7 +197,7 @@ error: {メッセージ}
 | 状況 | メッセージ | 終了コード |
 |------|-----------|-----------|
 | メモ内容未指定 | `error: memo content required` | 1 |
-| 設定ファイルなし | `error: not configured. run 'thn init' first` | 1 |
+| 設定ファイルなし | `error: not configured. run 'thn --init [<PATH>]' first` | 1 |
 | Vaultパス不正 | `error: vault not found: {path}` | 1 |
 | .obsidianなし | `error: not an obsidian vault: {path}` | 1 |
 | 書き込み失敗 | `error: failed to write: {path}` | 1 |

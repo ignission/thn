@@ -19,7 +19,7 @@ product.mdで定義した「ワンコマンドメモ追記」を実現する。U
 1. WHEN `thn "メモ内容"` を実行 THEN システム SHALL デイリーノートに `- HH:MM メモ内容` 形式で追記する
 2. WHEN メモ追記成功 THEN システム SHALL 出力なしで終了コード 0 を返す
 3. WHEN メモ内容が空 THEN システム SHALL `error: memo content required` を stderr に出力し終了コード 1 を返す
-4. WHEN 設定ファイルが存在しない THEN システム SHALL `error: not configured. run 'thn init' first` を stderr に出力する
+4. WHEN 設定ファイルが存在しない THEN システム SHALL `error: not configured. run 'thn --init [<PATH>]' first` を stderr に出力する
 
 ### Requirement 2: 初期設定（引数指定）
 
@@ -50,7 +50,7 @@ product.mdで定義した「ワンコマンドメモ追記」を実現する。U
 
 1. WHEN `thn config` を実行 THEN システム SHALL `vault_path`, `daily_folder`, `daily_format`, `insert_after` を表示する
 2. WHEN Obsidian設定ファイルが存在しない THEN システム SHALL デフォルト値を表示する
-3. IF 設定ファイルが存在しない THEN システム SHALL `error: not configured. run 'thn init' first` を表示する
+3. IF 設定ファイルが存在しない THEN システム SHALL `error: not configured. run 'thn --init [<PATH>]' first` を表示する
 
 ### Requirement 5: Obsidian設定読み取り
 

@@ -163,7 +163,7 @@ pub struct ThinoSettings {
 ### Error Scenarios
 1. **設定ファイル未作成**
    - **Handling:** ConfigError::NotConfigured を返す
-   - **User Impact:** `error: not configured. run 'thn init' first`
+   - **User Impact:** `error: not configured. run 'thn --init [<PATH>]' first`
 
 2. **Vaultパス不正**
    - **Handling:** ConfigError::VaultNotFound を返す

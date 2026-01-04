@@ -97,7 +97,7 @@ vault_path = "/path/to/vault"
 
 主なエラー:
 - `error: memo content required`
-- `error: not configured. run 'thn init' first`
+- `error: not configured. run 'thn --init [<PATH>]' first`
 - `error: vault not found: {path}`
 - `error: not an obsidian vault: {path}`
 

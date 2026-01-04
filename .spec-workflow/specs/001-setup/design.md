@@ -113,8 +113,8 @@ pub enum Commands {
 
 ### Error Scenarios
 1. **設定ファイルなし**
-   - **Handling:** エラーメッセージ表示、`thn init` を促す
-   - **User Impact:** `error: not configured. run 'thn init' first`
+   - **Handling:** エラーメッセージ表示、`thn --init [<PATH>]` を促す
+   - **User Impact:** `error: not configured. run 'thn --init [<PATH>]' first`
 
 2. **Vault不在**
    - **Handling:** パス検証でエラー

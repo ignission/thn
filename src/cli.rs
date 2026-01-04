@@ -15,8 +15,8 @@ use clap::Parser;
 )]
 pub struct Cli {
     /// Vaultパスを設定（省略時は対話形式）
-    #[arg(short = 'i', long, value_name = "PATH", num_args = 0..=1, default_missing_value = "")]
-    pub init: Option<PathBuf>,
+    #[arg(short = 'i', long, value_name = "PATH")]
+    pub init: Option<Option<PathBuf>>,
 
     /// 現在の設定を表示
     #[arg(short = 'c', long)]

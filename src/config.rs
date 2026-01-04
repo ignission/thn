@@ -39,7 +39,9 @@ impl fmt::Display for ConfigError {
             ConfigError::Io(err) => write!(f, "io error: {err}"),
             ConfigError::TomlDeserialize(err) => write!(f, "toml parse error: {err}"),
             ConfigError::TomlSerialize(err) => write!(f, "toml serialize error: {err}"),
-            ConfigError::NotFound => write!(f, "not configured. run 'thn init' first"),
+            ConfigError::NotFound => {
+                write!(f, "not configured. run 'thn --init [<PATH>]' first")
+            }
             ConfigError::VaultNotFound(path) => write!(f, "vault not found: {}", path.display()),
             ConfigError::NotObsidianVault(path) => {
                 write!(f, "not an obsidian vault: {}", path.display())
@@ -206,7 +208,10 @@ mod tests {
     #[test]
     fn test_config_error_display() {
         let err = ConfigError::NotFound;
-        assert_eq!(err.to_string(), "not configured. run 'thn init' first");
+        assert_eq!(
+            err.to_string(),
+            "not configured. run 'thn --init [<PATH>]' first"
+        );
     }
 
     #[test]
