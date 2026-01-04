@@ -10,20 +10,20 @@ use cli::Cli;
 fn main() {
     let cli = Cli::parse();
 
-    if cli.init.is_some() {
+    if let Some(init_arg) = cli.init {
         // --init: Vaultパスを設定
-        let init_path = cli.init.unwrap();
-        let vault_path = if init_path.as_os_str().is_empty() {
-            // パス省略時は対話形式で入力
-            match config::prompt_vault_path() {
-                Ok(p) => p,
-                Err(err) => {
-                    eprintln!("error: {err}");
-                    std::process::exit(1);
+        let vault_path = match init_arg {
+            Some(path) => path,
+            None => {
+                // パス省略時は対話形式で入力
+                match config::prompt_vault_path() {
+                    Ok(p) => p,
+                    Err(err) => {
+                        eprintln!("error: {err}");
+                        std::process::exit(1);
+                    }
                 }
             }
-        } else {
-            init_path
         };
 
         // バリデーション
