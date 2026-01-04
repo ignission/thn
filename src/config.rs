@@ -150,18 +150,18 @@ pub fn parse_vault_path(input: &str) -> Result<PathBuf, io::Error> {
         ));
     }
 
-    // チルダをホームディレクトリに展開
-    let path = if trimmed == "~" {
-        dirs::home_dir().unwrap_or_else(|| PathBuf::from("~"))
-    } else if let Some(rest) = trimmed.strip_prefix("~/") {
-        dirs::home_dir()
-            .map(|home| home.join(rest))
-            .unwrap_or_else(|| PathBuf::from(trimmed))
-    } else {
-        PathBuf::from(trimmed)
-    };
+    if trimmed == "~" {
+        return Ok(dirs::home_dir().unwrap_or_else(|| PathBuf::from("~")));
+    }
 
-    Ok(path)
+    if let Some(rest) = trimmed.strip_prefix("~/") {
+        let path = dirs::home_dir()
+            .map(|home| home.join(rest))
+            .unwrap_or_else(|| PathBuf::from(trimmed));
+        return Ok(path);
+    }
+
+    Ok(PathBuf::from(trimmed))
 }
 
 /// 対話形式でVaultパスを入力
