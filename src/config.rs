@@ -133,9 +133,26 @@ pub fn validate_vault_path(path: &Path) -> Result<(), ConfigError> {
     Ok(())
 }
 
+/// チルダをホームディレクトリに展開する
+///
+/// `~` または `~/...` で始まるパスをホームディレクトリに展開する。
+/// それ以外のパスはそのまま返す。
+fn expand_tilde(path: &str) -> PathBuf {
+    if path == "~" {
+        dirs::home_dir().unwrap_or_else(|| PathBuf::from("~"))
+    } else if let Some(rest) = path.strip_prefix("~/") {
+        dirs::home_dir()
+            .map(|home| home.join(rest))
+            .unwrap_or_else(|| PathBuf::from(path))
+    } else {
+        PathBuf::from(path)
+    }
+}
+
 /// 対話形式でVaultパスを入力
 ///
 /// "Vault path: " を表示してstdinから読み取る。
+/// `~` で始まるパスはホームディレクトリに展開される。
 ///
 /// # Errors
 ///
@@ -157,7 +174,7 @@ pub fn prompt_vault_path() -> Result<PathBuf, io::Error> {
         ));
     }
 
-    Ok(PathBuf::from(trimmed))
+    Ok(expand_tilde(trimmed))
 }
 
 impl Config {
@@ -266,5 +283,31 @@ mod tests {
 
         let result = validate_vault_path(temp_dir.path());
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_expand_tilde_home_only() {
+        let home = dirs::home_dir().unwrap();
+        let result = expand_tilde("~");
+        assert_eq!(result, home);
+    }
+
+    #[test]
+    fn test_expand_tilde_with_path() {
+        let home = dirs::home_dir().unwrap();
+        let result = expand_tilde("~/dev/note");
+        assert_eq!(result, home.join("dev/note"));
+    }
+
+    #[test]
+    fn test_expand_tilde_absolute_path_unchanged() {
+        let result = expand_tilde("/absolute/path");
+        assert_eq!(result, PathBuf::from("/absolute/path"));
+    }
+
+    #[test]
+    fn test_expand_tilde_relative_path_unchanged() {
+        let result = expand_tilde("relative/path");
+        assert_eq!(result, PathBuf::from("relative/path"));
     }
 }
