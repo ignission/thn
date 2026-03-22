@@ -30,7 +30,7 @@ jobs:
 
     steps:
       - name: チェックアウト
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Rustツールチェーンのセットアップ
         uses: dtolnay/rust-toolchain@stable
@@ -56,14 +56,14 @@ jobs:
 
       - name: アーティファクトのアップロード (Unix)
         if: runner.os != 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: thn-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/thn
 
       - name: アーティファクトのアップロード (Windows)
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: thn-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/thn.exe
@@ -76,14 +76,14 @@ jobs:
       contents: write
     steps:
       - name: チェックアウト
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: バージョン取得
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: 全アーティファクトのダウンロード
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
@@ -151,7 +151,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: homebrew-tapのチェックアウト
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ignission/homebrew-tap
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
